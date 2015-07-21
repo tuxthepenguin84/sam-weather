@@ -25,6 +25,7 @@ Example: ./samweather KALAUBUR4 temp 80 90
 
 Output: Temperature: 79.5 F (26.4 C) | 'Temp F'=79.5 'Temp C'=26.4
 
+
 Weather Parameters are:
 
 temp - Temperature in F & C

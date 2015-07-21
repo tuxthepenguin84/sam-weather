@@ -2,7 +2,7 @@
 
 ####################################################################################
 # Nagios plugin for monitoring weather parameters with Nagios                      #
-# Author: Sam Dockery dockesa@auburn.edu                                           #
+# Author: Sam Dockery samueldockery@gmail.com                                          #
 # http://exchange.nagios.org/directory/Plugins/Hardware/Others/Sam-Weather/details #
 #                                                                                  #
 # Huge thanks to Daniele at www.kernel-panic.it for assiting in the development    #
@@ -25,7 +25,7 @@ function usage {
 
 Sam Weather Ver. 2.0
 Author: Sam Dockery
-Email: dockesa@auburn.edu
+Email: samueldockery@gmail.com
 
 What's New with 2.0:
 1. Warning & Critical levels
