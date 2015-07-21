@@ -1,0 +1,260 @@
+#!/bin/bash
+
+####################################################################################
+# Nagios plugin for monitoring weather parameters with Nagios                      #
+# Author: Sam Dockery dockesa@auburn.edu                                           #
+# http://exchange.nagios.org/directory/Plugins/Hardware/Others/Sam-Weather/details #
+#                                                                                  #
+# Huge thanks to Daniele at www.kernel-panic.it for assiting in the development    #
+# of this plugin. And a thanks to weyoon on the Nagios Exchange for the suggestion #
+# of adding Pressure stats to the plugin                                           #
+####################################################################################
+
+# Constants ####################################################################
+URL="http://api.wunderground.com/weatherstation/WXCurrentObXML.asp"
+
+#Exit Codes
+RETURN_OK=0
+RETURN_WARN=1
+RETURN_CRIT=2
+RETURN_UNKN=3
+
+# Functions ####################################################################
+function usage {
+	cat << __EOF
+
+Sam Weather Ver. 2.0
+Author: Sam Dockery
+Email: dockesa@auburn.edu
+
+What's New with 2.0:
+1. Warning & Critical levels
+2. Added Pressure, Solar Radiation, & UV Index to parameters
+
+To find your STATIONID, go to http://www.wunderground.com/wundermap/ and search for a station near your location.
+Click on the station and you will see an alphanumeric Station ID.
+Software requirements are LYNX, GREP, and CUT.  These should be availble through your package manager (yum, apt-get, etc.)
+Should work with Nagios, NagiosXI, and any Unix/Linux system as long as the software requirements are met.
+Each weather parameter includes performance data (so long as the output isn't a string).
+
+Troubleshooting Tips:
+1. Make sure the plugin has the correct permissions on the file.  chown nagios:nagios samweather or chown apache:apache samweather
+2. Make sure you have the correct stationid, put it in all caps to be safe. Example: KALAUBUR4
+3. Only use 1 weather parameter at a time.  Might add the capability in the future for more parameters at a time.
+4. If the plugin returns no data, either the weather underground site is unavailable or you have an incorrect stationid.
+5. If you still have issues, verify you can open the stationid on the weather underground site.  Replace your stationid with the one at the end of
+Example: http://api.wunderground.com/weatherstation/WXCurrentObXML.asp?ID=KALAUBUR4
+6. Verify you have LYNX, GREP, and CUT installed.
+
+Usage:
+./samweather stationid weatherparameter warn crit
+
+Example:
+./samweather KALAUBUR4 temp 80 90
+
+Output:
+Temperature: 79.5 F (26.4 C) | 'Temp F'=79.5 'Temp C'=26.4
+
+Weather Parameters are:
+temp - Temperature in F & C
+heatindex - Heat Index in F & C
+humidity - Relative Humidity
+wind - Wind direction, degrees, and MPH
+precip - Precipitation today in Inches & Cent.
+press - Pressure in MB & In
+dewpoint - Dewpoint in F & C
+windchill - Windchill in F & C
+solar - Solar Radiation in watts/m^2
+uv - UV Index
+
+__EOF
+
+	exit $RETURN_UNKN
+}
+
+function getvalue {
+	local _match=$1
+	lynx -dump -source ${URL}?ID=${station_id} | grep \<${_match}\> | cut -d">" -f2 | cut -d"<" -f1
+	}
+
+
+# Main #########################################################################
+station_id=$1
+param=$2
+warn_thresh=$3
+crit_thresh=$4
+#Allow no warning/critical values and always return OK
+if [ -z "$warn_thresh" ]; then
+	warn_thresh=1000
+fi
+if [ -z "$crit_thresh" ]; then
+	crit_thresh=1000
+fi
+
+# Check mandatory parameters
+[[ -z "$station_id" || -z "$param" ]] && usage
+
+#Output for Temperature
+case $param in
+temp )
+	VAR1=$(getvalue temp_f)
+	VAR1=$(printf "${VAR1%.*}") #Remove the decimal from the value returned on VAR1 to avoid invalid arithmetic operator
+	VAR2=$(getvalue temp_c)
+	VAR3=$(getvalue temperature_string)
+    if [[ "$VAR1" -ge $crit_thresh ]]; then
+        printf "Temp CRIT: $VAR3 | 'Temp F'=$VAR1;$3;$4 'Temp C'=$VAR2\n"
+        exit $RETURN_CRIT
+    elif [[ "$VAR1" -ge $warn_thresh ]]; then
+        printf "Temp WARN: $VAR3 | 'Temp F'=$VAR1;$3;$4 'Temp C'=$VAR2\n"
+        exit $RETURN_WARN
+    else
+        printf "Temp OK: $VAR3 | 'Temp F'=$VAR1 'Temp C'=$VAR2\n"
+        exit $RETURN_OK
+    fi
+        ;;
+	
+    heatindex )
+	VAR1=$(getvalue heat_index_f)
+	VAR2=$(getvalue heat_index_c)
+	VAR3=$(getvalue heat_index_string)
+	if [[ "$VAR1" -ge $crit_thresh ]]; then
+	    printf "Heat CRIT: $VAR3 | 'Heat F'=$VAR1;$3;$4 'Heat C'=$VAR2\n"
+	    exit $RETURN_CRIT
+	elif [[ "$VAR1" -ge $warn_thresh ]]; then
+	    printf "Heat WARN: $VAR3 | 'Heat F'=$VAR1;$3;$4 'Heat C'=$VAR2\n"
+	    exit $RETURN_WARN
+	else
+	    printf "Heat OK: $VAR3 | 'Heat F'=$VAR1 'Heat C'=$VAR2\n"
+	    exit $RETURN_OK
+	fi
+        ;;
+	
+    humidity )
+	VAR1=$(getvalue relative_humidity)
+	if [[ "$VAR1" -ge $crit_thresh ]]; then
+	    printf "Humidity CRIT: $VAR1 Percent | 'Humidity'=$VAR1\n"
+	    exit $RETURN_CRIT
+	elif [[ "$VAR1" -ge $warn_thresh ]]; then
+	    printf "Humidity WARN: $VAR1 Percent | 'Humidity'=$VAR1\n"
+	    exit $RETURN_WARN
+	else
+	    printf "Humidity OK: $VAR1 Percent | 'Humidity'=$VAR1\n"
+	    exit $RETURN_OK
+	fi
+		;;
+	
+    wind )
+	VAR1=$(getvalue wind_dir)
+	VAR2=$(getvalue wind_degrees)
+	VAR3=$(getvalue wind_mph)
+	VAR3=$(printf "${VAR3%.*}") #Remove the decimal from the value returned on VAR1 to avoid invalid arithmetic operator
+	VAR4=$(getvalue wind_string)
+	if [[ "$VAR3" -ge $crit_thresh ]]; then
+	    printf "Wind CRIT: $VAR4 | 'Wind MPH'=$VAR3 'Wind Degrees'=$VAR2\n"
+	    exit $RETURN_CRIT
+	elif [[ "$VAR3" -ge $warn_thresh ]]; then
+	    printf "Wind WARN: $VAR4 | 'Wind MPH'=$VAR3 'Wind Degrees'=$VAR2\n"
+	    exit $RETURN_WARN
+	else
+	    printf "Wind OK: $VAR4 | 'Wind MPH'=$VAR3 'Wind Degrees'=$VAR2\n"
+	    exit $RETURN_OK
+	fi
+        ;;
+	
+    precip )
+	VAR1=$(getvalue precip_today_in)
+	VAR1=$(printf "${VAR1%.*}")
+	VAR2=$(getvalue precip_today_metric)
+	VAR2=$(printf $VAR2 | cut -d"c" -f1) #remove cm from value so it can be graphed
+	VAR3=$(getvalue precip_today_string)
+	if [[ "$VAR1" -ge $crit_thresh ]]; then
+	    printf "Precip CRIT: $VAR1 Inches | 'Precip. Today Inches'=$VAR1 'Precip. Today Cent'=$VAR2\n"
+	    exit $RETURN_CRIT
+	elif [[ "$VAR1" -ge $warn_thresh ]]; then
+	    printf "Precip WARN: $VAR1 Inches | 'Precip. Today Inches'=$VAR1 'Precip. Today Cent'=$VAR2\n"
+	    exit $RETURN_WARN
+	else
+	    printf "Precip OK: $VAR1 Inches | 'Precip. Today Inches'=$VAR1 'Precip. Today Cent'=$VAR2\n"
+	    exit $RETURN_OK
+	fi
+        ;;
+	
+    press )
+    VAR1=$(getvalue pressure_in)
+	VAR1=$(printf "${VAR1%.*}") #Remove the decimal from the value returned on VAR1 to avoid invalid arithmetic operator
+    VAR2=$(getvalue pressure_mb)
+    VAR3=$(getvalue pressure_string)
+    if [[ "$VAR1" -ge $crit_thresh ]]; then
+        printf "Pressure CRIT: $VAR3 | 'Pressure IN'=$VAR1;$3;$4 'Pressure MB'=$VAR2\n"
+        exit $RETURN_CRIT
+    elif [[ "$VAR1" -ge $warn_thresh ]]; then
+        printf "Pressure WARN: $VAR3 | 'Pressure IN'=$VAR1;$3;$4 'Pressure MB'=$VAR2\n"
+        exit $RETURN_WARN
+        else
+        printf "Pressure OK: $VAR3 | 'Pressure IN'=$VAR1 'Pressure MB'=$VAR2\n"
+        exit $RETURN_OK
+    fi
+        ;;
+	
+    dewpoint )
+    VAR1=$(getvalue dewpoint_f)
+	VAR1=$(printf "${VAR1%.*}") #Remove the decimal from the value returned on VAR1 to avoid invalid arithmetic operator
+    VAR2=$(getvalue dewpoint_c)
+    VAR3=$(getvalue dewpoint_string)
+    if [[ "$VAR1" -ge $crit_thresh ]]; then
+        printf "Dewpoint CRIT: $VAR3 | 'Dewpoint F'=$VAR1;$3;$4 'Dewpoint C'=$VAR2\n"
+        exit $RETURN_CRIT
+    elif [[ "$VAR1" -ge $warn_thresh ]]; then
+        printf "Dewpoint WARN: $VAR3 | 'Dewpoint F'=$VAR1;$3;$4 'Dewpoint C'=$VAR2\n"
+        exit $RETURN_WARN
+    else
+        printf "Dewpoint OK: $VAR3 | 'Dewpoint F'=$VAR1 'Dewpoint C'=$VAR2\n"
+        exit $RETURN_OK
+    fi
+        ;;
+    windchill )
+    VAR1=$(getvalue windchill_f)
+	VAR1=$(printf "${VAR1%.*}") #Remove the decimal from the value returned on VAR1 to avoid invalid arithmetic operator
+    VAR2=$(getvalue windchill_c)
+    VAR3=$(getvalue windchill_string)
+    if [[ "$VAR1" -ge $crit_thresh ]]; then
+        printf "Windchill CRIT: $VAR3 | 'Windchill F'=$VAR1;$3;$4 'Windchill C'=$VAR2\n"
+        exit $RETURN_CRIT
+    elif [[ "$VAR1" -ge $warn_thresh ]]; then
+        printf "Windchill WARN: $VAR3 | 'Windchill F'=$VAR1;$3;$4 'Windchill C'=$VAR2\n"
+        exit $RETURN_WARN
+    else
+        printf "Windchill OK: $VAR3 | 'Windchill F'=$VAR1 'Windchill C'=$VAR2\n"
+        exit $RETURN_OK
+    fi
+        ;;
+	
+	solar )
+    VAR1=$(getvalue solar_radiation)
+    if [[ "$VAR1" -ge $crit_thresh ]]; then
+        printf "Solar CRIT: $VAR1 | 'Solar Radiation'=$VAR1;$3;$4\n"
+        exit $RETURN_CRIT
+    elif [[ "$VAR1" -ge $warn_thresh ]]; then
+        printf "Solar WARN: $VAR1 | 'Solar Radiation'=$VAR1;$3;$4\n"
+        exit $RETURN_WARN
+    else
+        printf "Solar OK: $VAR1 | 'Solar Radiation'=$VAR1\n"
+        exit $RETURN_OK
+    fi
+        ;;
+	
+	uv )
+    VAR1=$(getvalue UV)
+	VAR1=$(printf "${VAR1%.*}") #Remove the decimal from the value returned on VAR1 to avoid invalid arithmetic operator
+    if [[ "$VAR1" -ge $crit_thresh ]]; then
+        printf "UV CRIT: $VAR1 | 'UV Index'=$VAR1;$3;$4\n"
+        exit $RETURN_CRIT
+    elif [[ "$VAR1" -ge $warn_thresh ]]; then
+        printf "UV WARN: $VAR1 | 'UV Index'=$VAR1;$3;$4\n"
+        exit $RETURN_WARN
+    else
+        printf "UV OK: $VAR1 | 'UV Index'=$VAR1\n"
+        exit $RETURN_OK
+    fi
+        ;;
+esac
