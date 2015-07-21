@@ -33,16 +33,16 @@ Example:
 Output: 
 Temperature: 79.5 F (26.4 C) | 'Temp F'=79.5 'Temp C'=26.4 
 
-Weather Parameters are: 
-temp - Temperature in F & C 
-heatindex - Heat Index in F & C 
-humidity - Relative Humidity 
-wind - Wind direction, degrees, and MPH 
-precip - Precipitation today in Inches & Cent. 
-press - Pressure in MB & In 
-dewpoint - Dewpoint in F & C 
-windchill - Windchill in F & C 
-solar - Solar Radiation in watts/m^2 
+Weather Parameters are:
+temp - Temperature in F & C
+heatindex - Heat Index in F & C
+humidity - Relative Humidity
+wind - Wind direction, degrees, and MPH
+precip - Precipitation today in Inches & Cent.
+press - Pressure in MB & In
+dewpoint - Dewpoint in F & C
+windchill - Windchill in F & C
+solar - Solar Radiation in watts/m^2
 uv - UV Index 
 
 Huge thanks to Daniele at www.kernel-panic.it for assiting in the development of this plugin. And a thanks to weyoon on the Nagios Exchange for the suggestion of adding Pressure stats to the plugin.
