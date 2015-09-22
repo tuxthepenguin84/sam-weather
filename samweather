@@ -147,9 +147,16 @@ temp )
     wind )
 	VAR1=$(getvalue wind_dir)
 	VAR2=$(getvalue wind_degrees)
+	if [ "$VAR2" == "-9999" ]; then
+		VAR2="0"
+	fi
 	VAR3=$(getvalue wind_mph)
+	if [ "$VAR3" == "-9999.0" ]; then
+		VAR3="0"
+	fi
 	VAR3=$(printf "${VAR3%.*}") #Remove the decimal from the value returned on VAR1 to avoid invalid arithmetic operator
 	VAR4=$(getvalue wind_string)
+	
 	if [[ "$VAR3" -ge $crit_thresh ]]; then
 	    printf "Wind CRIT: $VAR4 | 'Wind MPH'=$VAR3 'Wind Degrees'=$VAR2\n"
 	    exit $RETURN_CRIT
