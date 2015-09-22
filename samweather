@@ -74,7 +74,8 @@ __EOF
 
 function getvalue {
 	local _match=$1
-	lynx -dump -source ${URL}?ID=${station_id} | grep \<${_match}\> | cut -d">" -f2 | cut -d"<" -f1
+	curl ${URL}?ID=${station_id} | grep \<${_match}\> | cut -d">" -f2 | cut -d"<" -f1
+	#lynx -dump -source ${URL}?ID=${station_id} | grep \<${_match}\> | cut -d">" -f2 | cut -d"<" -f1
 	}
 
 
