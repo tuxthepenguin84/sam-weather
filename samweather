@@ -72,9 +72,27 @@ __EOF
 	exit $RETURN_UNKN
 }
 
+function gracefullError {
+	printf "UNKNOWN: problem with plugin"
+	exit $RETURN_UNKN
+}
+
+# handle shell errors gracefully
+trap 'gracefullError()' SIGINT
+trap 'gracefullError()' SIGKILL
+trap 'gracefullError()' SIGSYS
+trap 'gracefullError()' SIGABRT
+trap 'gracefullError()' SIGTERM
+
 function getvalue {
 	local _match=$1
-	lynx -dump -source ${URL}?ID=${station_id} | grep \<${_match}\> | cut -d">" -f2 | cut -d"<" -f1
+	if [[ ( -x $(which lynx) ) ]] ; then
+		lynx -dump -source ${URL}?ID=${station_id} | grep \<${_match}\> | cut -d">" -f2 | cut -d"<" -f1
+	elif [[ ( -x $(which curl) ) ]] ; then
+        	curl --url ${URL}?ID=${station_id} 2>/dev/null 3>/dev/null | grep \<${_match}\> | cut -d">" -f2 | cut -d"<" -f1 ;
+	else
+		gracefullError ;
+	fi
 	}
 
 
