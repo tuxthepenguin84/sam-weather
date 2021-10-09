@@ -30,6 +30,7 @@ Email: samueldockery@gmail.com
 What's New with 2.0:
 1. Warning & Critical levels
 2. Added Pressure, Solar Radiation, & UV Index to parameters
+
 To find your STATIONID, go to http://www.wunderground.com/wundermap/ and search for a station near your location.
 Click on the station and you will see an alphanumeric Station ID.
 Software requirements are LYNX, GREP, and CUT.  These should be availble through your package manager (yum, apt-get, etc.)
