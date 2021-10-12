@@ -11,7 +11,7 @@
 ####################################################################################
 
 # Constants ####################################################################
-URL="http://api.wunderground.com/weatherstation/WXCurrentObXML.asp"
+URL="https://api.wunderground.com/weatherstation/WXCurrentObXML.asp"
 
 #Exit Codes
 RETURN_OK=0
@@ -72,9 +72,28 @@ __EOF
 	exit $RETURN_UNKN
 }
 
+function gracefullError {
+	printf "UNKNOWN: problem with plugin"
+	exit $RETURN_UNKN
+}
+
+# Handle some shell sigs and errors gracefully
+trap 'gracefullError()' SIGINT
+trap 'gracefullError()' SIGKILL
+trap 'gracefullError()' SIGSYS
+trap 'gracefullError()' SIGABRT
+trap 'gracefullError()' SIGTERM
+
 function getvalue {
 	local _match=$1
-	lynx -dump -source ${URL}?ID=${station_id} | grep \<${_match}\> | cut -d">" -f2 | cut -d"<" -f1
+	if [[ ( -x $(which lynx) ) ]] ; then
+		lynx -dump -source ${URL}?ID=${station_id} | grep \<${_match}\> | cut -d">" -f2 | cut -d"<" -f1
+	elif [[ ( -x $(which curl) ) ]] ; then
+        	curl -s --url ${URL}?ID=${station_id} 2>/dev/null 3>/dev/null | grep \<${_match}\> | cut -d">" -f2 | cut -d"<" -f1
+	else
+		gracefulError ;
+	fi
+	#lynx -dump -source ${URL}?ID=${station_id} | grep \<${_match}\> | cut -d">" -f2 | cut -d"<" -f1
 	}
 
 
@@ -146,9 +165,16 @@ temp )
     wind )
 	VAR1=$(getvalue wind_dir)
 	VAR2=$(getvalue wind_degrees)
+	if [ "$VAR2" == "-9999" ]; then
+		VAR2="0"
+	fi
 	VAR3=$(getvalue wind_mph)
+	if [ "$VAR3" == "-9999.0" ]; then
+		VAR3="0"
+	fi
 	VAR3=$(printf "${VAR3%.*}") #Remove the decimal from the value returned on VAR1 to avoid invalid arithmetic operator
 	VAR4=$(getvalue wind_string)
+	
 	if [[ "$VAR3" -ge $crit_thresh ]]; then
 	    printf "Wind CRIT: $VAR4 | 'Wind MPH'=$VAR3 'Wind Degrees'=$VAR2\n"
 	    exit $RETURN_CRIT
